@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quizlet Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Word Quiz</h1>
+        <select id="wordListSelect"></select>
+        <button onclick="loadSelectedList()">Load Selected List</button>
+        <button onclick="startQuiz()">Start Quiz</button>
+        <div id="quiz" style="display: none;">
+            <p id="question"></p>
+            <input type="text" id="answer" placeholder="Type your answer...">
+            <button onclick="checkAnswer()">Submit</button>
+            <p id="feedback"></p>
+            <button onclick="nextQuestion()">Next</button>
+        </div>
+    </div>
+    <script>
+        let words = [];
+        let currentWord = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('wordlists/index.json')
+                .then(response => response.json())
+                .then(fileList => {
+                    loadWordLists(fileList);
+                })
+                .catch(error => console.error('Error loading word lists:', error));
+        });
+
+        function loadWordLists(fileList) {
+            const select = document.getElementById("wordListSelect");
+            select.innerHTML = "";
+            fileList.forEach(file => {
+                let option = document.createElement("option");
+                option.value = file;
+                option.textContent = file.replace('.txt', '');
+                select.appendChild(option);
+            });
+        }
+
+        function loadSelectedList() {
+            const select = document.getElementById("wordListSelect");
+            const fileName = select.value;
+            fetch(`wordlists/${fileName}`)
+                .then(response => response.text())
+                .then(data => {
+                    words = parseWordList(data);
+                    alert(`Loaded word list: ${fileName.replace('.txt', '')}`);
+                })
+                .catch(error => console.error('Error loading word list:', error));
+        }
+
+        function parseWordList(text) {
+            return text.split('\n').map(line => {
+                let parts = line.split('-');
+                if (parts.length === 2) {
+                    return { word: parts[0].trim(), translation: parts[1].trim() };
+                }
+                return null;
+            }).filter(entry => entry !== null);
+        }
+
+        function startQuiz() {
+            if (words.length === 0) {
+                alert('Please load a word list first.');
+                return;
+            }
+            document.getElementById('quiz').style.display = 'block';
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (words.length === 0) return;
+            currentWord = words[Math.floor(Math.random() * words.length)];
+        
+            // Remove the numbering from the word (if present)
+            const wordWithoutNumbering = currentWord.word.replace(/^\d+\.\s*/, '').trim();
+        
+            document.getElementById('question').innerText = `Translate: ${wordWithoutNumbering}`;
+            document.getElementById('answer').value = '';
+            document.getElementById('feedback').innerText = '';
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answer').value.trim();
+            const correctAnswers = currentWord.translation.split(/\s*[,/]\s*/).map(ans => ans.trim().toLowerCase());
+            if (correctAnswers.includes(userAnswer.toLowerCase())) {
+                document.getElementById('feedback').innerText = 'Correct!';
+                document.getElementById('feedback').style.color = 'green';
+            } else {
+                document.getElementById('feedback').innerText = `Wrong! Correct answer: ${currentWord.translation}`;
+                document.getElementById('feedback').style.color = 'red';
+            }
+        }
+    </script>
+</body>
+</html>
+
