@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Writing Quiz</title>
+</head>
+<body>
+    <h1>Writing Quiz</h1>
+    <p>Select a word list:</p>
+    <select id="wordListSelect"></select>
+    <button onclick="loadSelectedList()">Load List</button>
+    <div id="quiz-container">
+        <p id="question"></p>
+        <input type="text" id="answer" placeholder="Type your answer here">
+        <p id="feedback"></p>
+        <button onclick="checkAnswer()">Submit</button>
+        <button onclick="nextQuestion()">Next</button>
+    </div>
+    
+    <script>
+        let words = [];
+        let currentWord = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('wordlists/index.json')
+                .then(response => response.json())
+                .then(fileList => loadWordLists(fileList))
+                .catch(error => console.error('Error loading word lists:', error));
+        });
+
+        function loadWordLists(fileList) {
+            const select = document.getElementById("wordListSelect");
+            select.innerHTML = "";
+            fileList.forEach(file => {
+                let option = document.createElement("option");
+                option.value = file;
+                option.textContent = file.replace('.txt', '');
+                select.appendChild(option);
+            });
+        }
+
+        function loadSelectedList() {
+            const select = document.getElementById("wordListSelect");
+            const fileName = select.value;
+            fetch(`wordlists/${fileName}`)
+                .then(response => response.text())
+                .then(data => {
+                    words = parseWordList(data);
+                    alert(`Loaded word list: ${fileName.replace('.txt', '')}`);
+                })
+                .catch(error => console.error('Error loading word list:', error));
+        }
+
+        function parseWordList(text) {
+            return text.split('\n').map(line => {
+                const parts = line.split('-');
+                if (parts.length === 2) {
+                    // Remove numbering and any extra space from the word part
+                    const word = parts[0].replace(/^\d+\./, '').trim();
+                    const translation = parts[1].trim();
+                    return { word, translation };
+                }
+                return null;
+            }).filter(entry => entry !== null);
+        }
+        
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answer').value.trim();
+            const feedback = document.getElementById('feedback');
+        
+            if (userAnswer === currentWord.translation) {
+                feedback.innerText = 'Correct!';
+                feedback.style.color = 'green';
+            } else {
+                feedback.innerText = `Wrong! The correct answer is: ${currentWord.translation}`;
+                feedback.style.color = 'red';
+            }
+        }
+        
+        function nextQuestion() {
+            if (words.length === 0) return;
+            currentWord = words[Math.floor(Math.random() * words.length)];
+            document.getElementById('question').innerText = `Translate: ${currentWord.word}`;
+            document.getElementById('answer').value = '';
+            document.getElementById('feedback').innerText = '';  // Clear previous feedback
+        }
+        
+    </script>
+</body>
+</html>
